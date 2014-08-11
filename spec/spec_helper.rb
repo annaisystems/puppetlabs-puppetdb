@@ -13,6 +13,10 @@ RSpec.configure do |c|
     # Store any environment variables away to be restored later
     @old_env = {}
     ENV.each_key {|k| @old_env[k] = ENV[k]}
+
+    if Gem::Version.new(`puppet --version`) >= Gem::Version.new('3.5')
+      Puppet.settings[:strict_variables]=true
+    end
   end
 
   c.after :each do

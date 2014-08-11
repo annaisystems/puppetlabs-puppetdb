@@ -7,6 +7,7 @@ class puppetdb::server::jetty_ini(
   $ssl_listen_port    = $puppetdb::params::ssl_listen_port,
   $disable_ssl        = $puppetdb::params::disable_ssl,
   $confdir            = $puppetdb::params::confdir,
+  $max_threads        = $puppetdb::params::max_threads,
 ) inherits puppetdb::params {
 
   #Set the defaults
@@ -55,5 +56,17 @@ class puppetdb::server::jetty_ini(
     ensure  => $ssl_setting_ensure,
     setting => 'ssl-port',
     value   => $ssl_listen_port,
+  }
+
+  if ($max_threads) {
+    ini_setting {'puppetdb_max_threads':
+      setting => 'max-threads',
+      value   => $max_threads,
+    }
+  } else {
+    ini_setting {'puppetdb_max_threads':
+      ensure  => absent,
+      setting => 'max-threads',
+    }
   }
 }

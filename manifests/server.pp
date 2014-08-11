@@ -23,12 +23,25 @@ class puppetdb::server(
   $conn_max_age            = $puppetdb::params::conn_max_age,
   $conn_keep_alive         = $puppetdb::params::conn_keep_alive,
   $conn_lifetime           = $puppetdb::params::conn_lifetime,
+  $read_database           = $puppetdb::params::read_database,
+  $read_database_host      = $puppetdb::params::read_database_host,
+  $read_database_port      = $puppetdb::params::read_database_port,
+  $read_database_username  = $puppetdb::params::read_database_username,
+  $read_database_password  = $puppetdb::params::read_database_password,
+  $read_database_name      = $puppetdb::params::read_database_name,
+  $read_database_ssl       = $puppetdb::params::read_database_ssl,
+  $read_log_slow_statements = $puppetdb::params::read_log_slow_statements,
+  $read_conn_max_age       = $puppetdb::params::read_conn_max_age,
+  $read_conn_keep_alive    = $puppetdb::params::read_conn_keep_alive,
+  $read_conn_lifetime      = $puppetdb::params::read_conn_lifetime,
   $puppetdb_package        = $puppetdb::params::puppetdb_package,
   $puppetdb_version        = $puppetdb::params::puppetdb_version,
   $puppetdb_service        = $puppetdb::params::puppetdb_service,
   $puppetdb_service_status = $puppetdb::params::puppetdb_service_status,
   $confdir                 = $puppetdb::params::confdir,
-  $java_args               = {}
+  $manage_firewall         = true,
+  $java_args               = {},
+  $max_threads             = $puppetdb::params::max_threads
 ) inherits puppetdb::params {
 
   # Apply necessary suffix if zero is specified.
@@ -66,16 +79,24 @@ class puppetdb::server(
     fail("puppetdb_service_status valid values are 'true', 'running', 'false', and 'stopped'. You provided '${puppetdb_service_status}'")
   }
 
+  # Validate read-database type (Currently only postgres is supported)
+  if !($read_database in ['postgres']) {
+    fail("read_database must be 'postgres'. You provided '${read_database}'")
+  }
+
   package { $puppetdb_package:
     ensure => $puppetdb_version,
     notify => Service[$puppetdb_service],
   }
 
-  class { 'puppetdb::server::firewall':
-    http_port              => $listen_port,
-    open_http_port         => $open_listen_port,
-    ssl_port               => $ssl_listen_port,
-    open_ssl_port          => $open_ssl_listen_port,
+  if $manage_firewall {
+
+    class { 'puppetdb::server::firewall':
+      http_port              => $listen_port,
+      open_http_port         => $open_listen_port,
+      ssl_port               => $ssl_listen_port,
+      open_ssl_port          => $open_ssl_listen_port,
+    }
   }
 
   class { 'puppetdb::server::database_ini':
@@ -98,6 +119,22 @@ class puppetdb::server(
     notify              => Service[$puppetdb_service],
   }
 
+  class { 'puppetdb::server::read_database_ini':
+    database            => $read_database,
+    database_host       => $read_database_host,
+    database_port       => $read_database_port,
+    database_username   => $read_database_username,
+    database_password   => $read_database_password,
+    database_name       => $read_database_name,
+    database_ssl        => $read_database_ssl,
+    log_slow_statements => $read_log_slow_statements,
+    conn_max_age        => $read_conn_max_age,
+    conn_keep_alive     => $read_conn_keep_alive,
+    conn_lifetime       => $read_conn_lifetime,
+    confdir             => $confdir,
+    notify              => Service[$puppetdb_service],
+  }
+
   class { 'puppetdb::server::jetty_ini':
     listen_address      => $listen_address,
     listen_port         => $listen_port,
@@ -106,6 +143,7 @@ class puppetdb::server(
     ssl_listen_port     => $ssl_listen_port,
     disable_ssl         => $disable_ssl,
     confdir             => $confdir,
+    max_threads         => $max_threads,
     notify              => Service[$puppetdb_service],
   }
 
@@ -137,9 +175,16 @@ class puppetdb::server(
     enable => $service_enabled,
   }
 
-  Package[$puppetdb_package] ->
-  Class['puppetdb::server::firewall'] ->
-  Class['puppetdb::server::database_ini'] ->
-  Class['puppetdb::server::jetty_ini'] ->
-  Service[$puppetdb_service]
+  if $manage_firewall { 
+    Package[$puppetdb_package] ->
+    Class['puppetdb::server::firewall'] ->
+    Class['puppetdb::server::database_ini'] ->
+    Class['puppetdb::server::jetty_ini'] ->
+    Service[$puppetdb_service]
+  } else {
+    Package[$puppetdb_package] ->
+    Class['puppetdb::server::database_ini'] ->
+    Class['puppetdb::server::jetty_ini'] ->
+    Service[$puppetdb_service]
+  }
 }

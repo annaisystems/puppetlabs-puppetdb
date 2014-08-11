@@ -206,6 +206,10 @@ If true, the puppetdb web server will only serve HTTP and not HTTPS requests (de
 
 If true, open the ssl_listen\_port on the firewall (defaults to true).
 
+###`manage_dbserver`
+
+If true, the PostgreSQL server will be managed by this module (defaults to true).
+
 ####`database`
 
 Which database backend to use; legal values are `postgres` (default) or `embedded`. The `embedded` db can be used for very small installations or for testing, but is not recommended for use in production environments. For more info, see the [puppetdb docs](http://docs.puppetlabs.com/puppetdb/).
@@ -296,6 +300,66 @@ The puppetdb configuration directory (defaults to `/etc/puppetdb/conf.d`).
 Java VM options used for overriding default Java VM options specified in PuppetDB package (defaults to `{}`). See [PuppetDB Configuration](http://docs.puppetlabs.com/puppetdb/1.1/configure.html) to get more details about the current defaults.
 
 Example: to set `-Xmx512m -Xms256m` options use `{ '-Xmx' => '512m', '-Xms' => '256m' }`
+
+####`max_threads`
+
+Jetty option to explicetly set max-thread. The default is undef, so the PuppetDB-jetty default is used. 
+
+####`read_database`
+
+Which database backend to use for the read database; Currently only supports `postgres` (default). This option is supported in PuppetDB >= 1.6.
+
+####`read_database_host`
+*This parameter must be set to enable the puppetdb read-database.*
+
+The hostname or IP address of the read database server (defaults to `undef`).
+The default is to use the regular database for reads and writes. This option is supported in PuppetDB >= 1.6.
+
+####`read_database_port`
+
+The port that the read database server listens on (defaults to `5432`). This option is supported in PuppetDB >= 1.6.
+
+####`read_database_username`
+
+The name of the read database user to connect as (defaults to `puppetdb`). This option is supported in PuppetDB >= 1.6.
+
+####`read_database_password`
+
+The password for the read database user (defaults to `puppetdb`). This option is supported in PuppetDB >= 1.6.
+
+####`read_database_name`
+
+The name of the read database instance to connect to (defaults to `puppetdb`). This option is supported in PuppetDB >= 1.6.
+
+####`read_database_ssl`
+
+If true, puppetdb will use SSL to connect to the postgres read database (defaults to false).
+Setting up proper trust- and keystores has to be managed outside of the puppetdb module. This option is supported in PuppetDB >= 1.6.
+
+####`read_log_slow_statements`
+
+This sets the number of seconds before an SQL query to the read database is considered "slow." Slow SQL queries are logged as warnings, to assist in debugging and tuning. Note PuppetDB does not interrupt slow queries; it simply reports them after they complete.
+
+The default value is 10 seconds. A value of 0 will disable logging of slow queries. This option is supported in PuppetDB >= 1.6.
+
+####`read_conn_max_age`
+
+The maximum time (in minutes), for a pooled read database connection to remain unused before it is closed off.
+
+If not supplied, we default to 60 minutes. This option is supported in PuppetDB >= 1.6.
+
+####`read_conn_keep_alive`
+
+This sets the time (in minutes), for a read database connection to remain idle before sending a test query to the DB. This is useful to prevent a DB from timing out connections on its end.
+
+If not supplied, we default to 45 minutes. This option is supported in PuppetDB >= 1.6.
+
+####`read_conn_lifetime`
+
+The maximum time (in minutes) a pooled read database connection should remain open. Any connections older than this setting will be closed off. Connections currently in use will not be affected until they are returned to the pool.
+
+If not supplied, we won't terminate connections based on their age alone. This option is supported in PuppetDB >= 1.6.
+
 
 ### puppetdb:server
 
@@ -416,6 +480,10 @@ Creates a user for access the database. Defaults to `puppetdb`.
 
 Sets the password for the database user above. Defaults to `puppetdb`.
 
+####`manage_server`
+
+Conditionally manages the PostgresQL server via `postgresql::server`. Defaults to `true`. If set to false, this class will create the database and user via `postgresql::server::db` but not attempt to install or manage the server itself.
+
 Implementation
 ---------------
 
@@ -429,6 +497,19 @@ Configures the puppet master to use PuppetDB as the facts terminus. *WARNING*: t
 
     class { 'puppetdb::master::routes':
       puppet_confdir => '/etc/puppet'
+    }
+
+The optional parameter routes can be used to specify a custom route configuration. For example to configure routes for masterless puppet.
+
+    class { 'puppetdb::master::routes':
+      routes => {
+        'apply' => {
+          'facts' => {
+            'terminus' => 'facter',
+            'cache'    => 'puppetdb_apply',
+          }
+        }
+      }
     }
 
 **puppetdb::master::storeconfigs**
@@ -464,8 +545,8 @@ Currently, PuppetDB is compatible with:
     Puppet Version: 2.7+
 
 Platforms:
-* RHEL6
-* Debian6
+* EL 6
+* Debian 6
 * Ubuntu 10.04
 * Archlinux
 

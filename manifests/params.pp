@@ -12,6 +12,7 @@ class puppetdb::params {
   $open_postgres_port        = undef
 
   $database                  = 'postgres'
+  $manage_dbserver           = true
 
   # The remaining database settings are not used for an embedded database
   $database_host          = 'localhost'
@@ -35,6 +36,21 @@ class puppetdb::params {
   $conn_keep_alive        = '45'
   $conn_lifetime          = '0'
 
+  $max_threads            = undef
+
+  # These settings are for the read database
+  $read_database            = 'postgres'
+  $read_database_host       = undef
+  $read_database_port       = '5432'
+  $read_database_name       = 'puppetdb'
+  $read_database_username   = 'puppetdb'
+  $read_database_password   = 'puppetdb'
+  $read_database_ssl        = false
+  $read_log_slow_statements = '10'
+  $read_conn_max_age        = '60'
+  $read_conn_keep_alive     = '45'
+  $read_conn_lifetime       = '0'
+
   case $::osfamily {
     'RedHat': {
       $firewall_supported       = true
@@ -51,7 +67,7 @@ class puppetdb::params {
     }
   }
 
-  if $::puppetversion =~ /Puppet Enterprise/ {
+  if defined('$::is_pe') and $::is_pe == 'true' {
     $puppetdb_package     = 'pe-puppetdb'
     $puppetdb_service     = 'pe-puppetdb'
     $confdir              = '/etc/puppetlabs/puppetdb/conf.d'

@@ -9,7 +9,7 @@ describe 'puppetdb::server::jetty_ini', :type => :class do
       }
     end
 
-    it { should include_class('puppetdb::server::jetty_ini') }
+    it { should contain_class('puppetdb::server::jetty_ini') }
 
     describe 'when using default values' do
       it { should contain_ini_setting('puppetdb_host').
@@ -119,6 +119,22 @@ describe 'puppetdb::server::jetty_ini', :type => :class do
              'path'    => '/etc/puppetdb/conf.d/jetty.ini',
              'section' => 'jetty',
              'setting' => 'ssl-port'
+             )}
+    end
+
+    describe 'when setting max_threads' do
+      let(:params) do
+        {
+          'max_threads' => 150
+        }
+      end
+      it { should contain_ini_setting('puppetdb_max_threads').
+        with(
+             'ensure'  => 'present',
+             'path'    => '/etc/puppetdb/conf.d/jetty.ini',
+             'section' => 'jetty',
+             'setting' => 'max-threads',
+             'value'   => '150'
              )}
     end
   end
